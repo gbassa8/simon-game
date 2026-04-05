@@ -1,0 +1,77 @@
+name: Preview environment
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  packages: write
+  pull-requests: write
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    uses: ./.github/workflows/build-and-push.yml
+    with:
+      tag: pr-${{ github.event.pull_request.number }}
+    secrets: inherit
+
+  crear-schema-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del repo
+        uses: actions/checkout@v4
+
+      - name: Setup de Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Crear schema de preview
+        run: npm run db:migrate
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+          DATABASE_SCHEMA: preview_pr_${{ github.event.pull_request.number }}
+
+  comentar-preview:
+    runs-on: ubuntu-latest
+    needs: [build, crear-schema-preview]
+    steps:
+      - name: Crear comentario en el PR
+        uses: actions/github-script@v7
+        env:
+          BRANCH: ${{ github.head_ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        with:
+          script: |
+            const branch = process.env.BRANCH;
+            const prNumber = process.env.PR_NUMBER;
+            const branchSlug = branch
+              .toLowerCase()
+              .replace(/[^a-z0-9-]/g, '-')
+              .replace(/-+/g, '-')
+              .replace(/^-|-$/g, '')
+              .slice(0, 50);
+            const url = `https://${branchSlug}.preview.simongame.live`;
+
+            const body = [
+              '## Preview environment',
+              '',
+              `- URL: ${url}`,
+              `- Schema: \`preview_pr_${prNumber}\``,
+              `- Imagen: \`pr-${prNumber}\``
+            ].join('\n');
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });

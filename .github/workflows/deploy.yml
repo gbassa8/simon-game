@@ -1,0 +1,61 @@
+name: Deploy a produccion
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    uses: ./.github/workflows/build-and-push.yml
+    with:
+      tag: sha-${{ github.sha }}
+    secrets: inherit
+
+  crear-public-si-no-existe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del repo
+        uses: actions/checkout@v4
+
+      - name: Setup de Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Crear schema public si no existe
+        run: npm run db:migrate
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+          DATABASE_SCHEMA: public
+
+  actualizar-infra:
+    runs-on: ubuntu-latest
+    needs: [build, crear-public-si-no-existe]
+    steps:
+      - name: Checkout del repo de infra
+        uses: actions/checkout@v4
+        with:
+          repository: gbassa8/preview-environments
+          token: ${{ secrets.INFRA_REPO_TOKEN }}
+          path: infra-repo
+
+      - name: Actualizar tag de produccion
+        run: |
+          sed -i 's|^newTag: .*|newTag: sha-${{ github.sha }}|' infra-repo/gitops/services/simon-game/prod/kustomization.yaml
+
+      - name: Commit y push de infra
+        run: |
+          git -C infra-repo config user.name github-actions[bot]
+          git -C infra-repo config user.email github-actions[bot]@users.noreply.github.com
+          git -C infra-repo add gitops/services/simon-game/prod/kustomization.yaml
+          git -C infra-repo diff --cached --quiet && exit 0
+          git -C infra-repo commit -m "chore: deploy simon-game sha-${{ github.sha }}"
+          git -C infra-repo push origin HEAD:main

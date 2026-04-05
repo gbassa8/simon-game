@@ -7,8 +7,11 @@
     "dev": "vite",
     "dev:server": "tsx watch server.ts",
     "build": "vite build && tsc -p tsconfig.server.json",
-    "check": "tsc --noEmit && tsc -p tsconfig.server.json --noEmit",
-    "start": "node server-dist/server.js"
+    "check": "tsc --noEmit && tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.scripts.json --noEmit",
+    "start": "node server-dist/server.js",
+    "db:create-schema": "tsx scripts/create-schema.ts",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:drop-schema": "tsx scripts/drop-schema.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.7",
