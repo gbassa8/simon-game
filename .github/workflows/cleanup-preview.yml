@@ -1,0 +1,94 @@
+name: Cleanup preview
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+  packages: write
+  pull-requests: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del repo
+        uses: actions/checkout@v4
+
+      - name: Setup de Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Borrar schema preview
+        run: npm run db:drop-schema
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+          DATABASE_SCHEMA: preview_pr_${{ github.event.pull_request.number }}
+
+      - name: Borrar tags preview en GHCR
+        continue-on-error: true
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const ownerType = context.payload.repository.owner.type;
+            const packageName = 'simon-game';
+            const tagName = `pr-${context.payload.pull_request.number}`;
+
+            const listVersions = ownerType === 'Organization'
+              ? github.rest.packages.getAllPackageVersionsForPackageOwnedByOrg
+              : github.rest.packages.getAllPackageVersionsForPackageOwnedByUser;
+
+            const deleteVersion = ownerType === 'Organization'
+              ? github.rest.packages.deletePackageVersionForOrg
+              : github.rest.packages.deletePackageVersionForUser;
+
+            const ownerKey = ownerType === 'Organization' ? 'org' : 'username';
+            const versions = await github.paginate(listVersions, {
+              package_type: 'container',
+              package_name: packageName,
+              per_page: 100,
+              [ownerKey]: owner,
+            });
+
+            for (const version of versions) {
+              const tags = version.metadata?.container?.tags ?? [];
+
+              if (!tags.includes(tagName)) {
+                continue;
+              }
+
+              await deleteVersion({
+                package_type: 'container',
+                package_name: packageName,
+                package_version_id: version.id,
+                [ownerKey]: owner,
+              });
+            }
+
+      - name: Crear comentario en el PR
+        uses: actions/github-script@v7
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        with:
+          script: |
+            const prNumber = process.env.PR_NUMBER;
+            const body = [
+              '## Preview cleanup',
+              '',
+              '- Namespace y recursos de Kubernetes: eliminados por ApplicationSet',
+              `- Schema: \`preview_pr_${prNumber}\` eliminado`,
+              `- Tag GHCR \`pr-${prNumber}\`: eliminado`
+            ].join('\n');
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
