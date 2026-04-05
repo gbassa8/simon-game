@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simon</title>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="panel">
+        <div class="meta">
+          <p id="status">Press start</p>
+          <p id="score">Round 0</p>
+        </div>
+        <div class="board" aria-label="Simon board">
+          <button class="pad green" data-color="green" aria-label="Green"></button>
+          <button class="pad red" data-color="red" aria-label="Red"></button>
+          <button class="pad yellow" data-color="yellow" aria-label="Yellow"></button>
+          <button class="pad blue" data-color="blue" aria-label="Blue"></button>
+        </div>
+        <button id="start" class="start">Start</button>
+      </section>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

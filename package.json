@@ -1,0 +1,26 @@
+{
+  "name": "simon-game",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:server": "tsx watch server.ts",
+    "build": "vite build && tsc -p tsconfig.server.json",
+    "check": "tsc --noEmit && tsc -p tsconfig.server.json --noEmit",
+    "start": "node server-dist/server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.2",
+    "@types/pg": "^8.11.10",
+    "typescript": "^5.7.2",
+    "tsx": "^4.19.2",
+    "vite": "^6.0.3"
+  }
+}
