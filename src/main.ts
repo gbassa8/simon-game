@@ -6,6 +6,13 @@ type BestScoreResponse = {
   bestScore: number | null
 }
 
+type SaveModalResult =
+  | { save: false }
+  | {
+      save: true
+      name: string
+    }
+
 const colors: Color[] = ['green', 'red', 'yellow', 'blue']
 
 const playerIdStorageKey = 'simon-player-id'
@@ -41,6 +48,184 @@ function getText(selector: string): HTMLElement {
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
     window.setTimeout(resolve, ms)
+  })
+}
+
+function applyStyles(element: HTMLElement, styles: Record<string, string>): void {
+  for (const [property, value] of Object.entries(styles)) {
+    element.style.setProperty(property, value)
+  }
+}
+
+function createModalButton(label: string, primary: boolean): HTMLButtonElement {
+  const button = document.createElement('button')
+  button.type = 'button'
+  button.textContent = label
+
+  applyStyles(button, {
+    border: '1px solid #3a3a3a',
+    background: primary ? '#f3f3f3' : '#1f1f1f',
+    color: primary ? '#111' : '#f3f3f3',
+    padding: '10px 14px',
+    'border-radius': '999px',
+    cursor: 'pointer',
+    'font-size': '12px',
+    'text-transform': 'uppercase',
+    'letter-spacing': '0.06em',
+    'min-width': '88px',
+  })
+
+  return button
+}
+
+function showSaveModal(score: number, defaultName: string): Promise<SaveModalResult> {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div')
+    const modal = document.createElement('div')
+    const title = document.createElement('p')
+    const message = document.createElement('p')
+    const nameInput = document.createElement('input')
+    const actions = document.createElement('div')
+    const noButton = createModalButton('No', false)
+    const yesButton = createModalButton('Yes', true)
+    const cancelButton = createModalButton('Cancel', false)
+    const saveButton = createModalButton('Save', true)
+    let mode: 'choice' | 'name' = 'choice'
+    let closed = false
+
+    applyStyles(overlay, {
+      position: 'fixed',
+      inset: '0',
+      display: 'grid',
+      'place-items': 'center',
+      background: 'rgba(0, 0, 0, 0.72)',
+      'z-index': '1000',
+      padding: '20px',
+    })
+
+    applyStyles(modal, {
+      width: 'min(92vw, 360px)',
+      background: '#171717',
+      border: '1px solid #3a3a3a',
+      'border-radius': '14px',
+      padding: '16px',
+      display: 'grid',
+      gap: '10px',
+    })
+
+    applyStyles(title, {
+      margin: '0',
+      color: '#f3f3f3',
+      'font-size': '15px',
+      'font-weight': '600',
+      'text-transform': 'uppercase',
+      'letter-spacing': '0.06em',
+    })
+
+    applyStyles(message, {
+      margin: '0',
+      color: '#d8d8d8',
+      'font-size': '14px',
+    })
+
+    applyStyles(nameInput, {
+      width: '100%',
+      border: '1px solid #3a3a3a',
+      'border-radius': '8px',
+      background: '#101010',
+      color: '#f3f3f3',
+      padding: '10px 12px',
+      'font-size': '14px',
+    })
+
+    applyStyles(actions, {
+      display: 'flex',
+      'justify-content': 'flex-end',
+      gap: '8px',
+      'margin-top': '4px',
+    })
+
+    title.textContent = 'Save score'
+    nameInput.placeholder = 'Name'
+    nameInput.value = defaultName
+
+    function finish(result: SaveModalResult): void {
+      if (closed) {
+        return
+      }
+
+      closed = true
+      document.removeEventListener('keydown', onKeyDown)
+      overlay.remove()
+      resolve(result)
+    }
+
+    function trySave(): void {
+      const name = nameInput.value.trim()
+
+      if (name === '') {
+        nameInput.focus()
+        return
+      }
+
+      finish({ save: true, name })
+    }
+
+    function showChoiceStep(): void {
+      mode = 'choice'
+      message.textContent = `Save score ${score}?`
+      nameInput.style.display = 'none'
+      actions.replaceChildren(noButton, yesButton)
+      yesButton.focus()
+    }
+
+    function showNameStep(): void {
+      mode = 'name'
+      message.textContent = 'Choose display name'
+      nameInput.style.display = 'block'
+      actions.replaceChildren(cancelButton, saveButton)
+      window.setTimeout(() => {
+        nameInput.focus()
+        nameInput.select()
+      }, 0)
+    }
+
+    function onKeyDown(event: KeyboardEvent): void {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        finish({ save: false })
+        return
+      }
+
+      if (event.key !== 'Enter') {
+        return
+      }
+
+      event.preventDefault()
+
+      if (mode === 'choice') {
+        showNameStep()
+        return
+      }
+
+      trySave()
+    }
+
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) {
+        finish({ save: false })
+      }
+    })
+    noButton.addEventListener('click', () => finish({ save: false }))
+    yesButton.addEventListener('click', showNameStep)
+    cancelButton.addEventListener('click', () => finish({ save: false }))
+    saveButton.addEventListener('click', trySave)
+    document.addEventListener('keydown', onKeyDown)
+
+    modal.append(title, message, nameInput, actions)
+    overlay.append(modal)
+    document.body.append(overlay)
+    showChoiceStep()
   })
 }
 
@@ -221,18 +406,13 @@ async function loadBestScore(): Promise<void> {
 }
 
 async function saveScore(score: number): Promise<void> {
-  const wantsSave = window.confirm(`Game over. Save score ${score}?`)
+  const result = await showSaveModal(score, playerName ?? '')
 
-  if (!wantsSave) {
+  if (!result.save) {
     return
   }
 
-  const defaultName = playerName ?? ''
-  const name = window.prompt('Name', defaultName)?.trim()
-
-  if (!name) {
-    return
-  }
+  const name = result.name
 
   setPlayerName(name)
 
