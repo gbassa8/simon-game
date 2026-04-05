@@ -116,9 +116,6 @@ async function start(): Promise<void> {
     )
   `)
 
-  await pool.query('alter table simon_scores add column if not exists player_id text')
-  await pool.query("update simon_scores set player_id = concat('legacy-', id) where player_id is null")
-  await pool.query('alter table simon_scores alter column player_id set not null')
   await pool.query('create index if not exists simon_scores_player_id_score_idx on simon_scores (player_id, score desc, id desc)')
 
   app.listen(getPort(), () => {
