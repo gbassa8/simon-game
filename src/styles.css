@@ -1,8 +1,48 @@
 :root {
   color-scheme: dark;
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
-  background: #111;
-  color: #f3f3f3;
+  --bg: #111;
+  --text: #f3f3f3;
+  --muted: #d8d8d8;
+  --panel-accent: #cfcfcf;
+  --surface: #171717;
+  --surface-hover: #202020;
+  --border: #3a3a3a;
+  --button-text: #f3f3f3;
+  --button-secondary-bg: #111;
+  --modal-surface: #171717;
+  --modal-text: #f3f3f3;
+  --modal-muted: #d8d8d8;
+  --modal-border: #3a3a3a;
+  --modal-input-bg: #101010;
+  --modal-button-bg: #1f1f1f;
+  --modal-button-text: #f3f3f3;
+  --modal-button-primary-bg: #f3f3f3;
+  --modal-button-primary-text: #111;
+  background: var(--bg);
+  color: var(--text);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #ffffff;
+  --text: #111111;
+  --muted: #3f3f3f;
+  --panel-accent: #4a4a4a;
+  --surface: #ffffff;
+  --surface-hover: #f2f2f2;
+  --border: #4a4a4a;
+  --button-text: #111111;
+  --button-secondary-bg: #ffffff;
+  --modal-surface: #ffffff;
+  --modal-text: #111111;
+  --modal-muted: #3f3f3f;
+  --modal-border: #4a4a4a;
+  --modal-input-bg: #ffffff;
+  --modal-button-bg: #ffffff;
+  --modal-button-text: #111111;
+  --modal-button-primary-bg: #111111;
+  --modal-button-primary-text: #ffffff;
 }
 
 * {
@@ -12,7 +52,8 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: #111;
+  background: var(--bg);
+  color: var(--text);
 }
 
 .shell {
@@ -20,9 +61,11 @@ body {
   display: grid;
   place-items: center;
   padding: 24px;
+  background: var(--bg);
 }
 
 .panel {
+  position: relative;
   width: min(92vw, 560px);
   display: grid;
   gap: 18px;
@@ -31,6 +74,7 @@ body {
 .meta {
   position: relative;
   min-height: 18px;
+  padding-right: 120px;
   font-size: 14px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -38,7 +82,7 @@ body {
 
 .meta p {
   margin: 0;
-  color: #d8d8d8;
+  color: var(--muted);
 }
 
 .meta p:first-child {
@@ -67,7 +111,7 @@ body {
   gap: 10px;
   padding: 12px;
   border-radius: 18px;
-  background: #cfcfcf;
+  background: var(--panel-accent);
 }
 
 .pad {
@@ -109,9 +153,9 @@ body {
 
 .start {
   justify-self: center;
-  border: 1px solid #3a3a3a;
-  background: #171717;
-  color: #f3f3f3;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--button-text);
   padding: 10px 18px;
   border-radius: 999px;
   cursor: pointer;
@@ -120,5 +164,45 @@ body {
 }
 
 .start:hover {
-  background: #202020;
+  background: var(--surface-hover);
+}
+
+.theme-toggle {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 10;
+  border: 1px solid var(--border);
+  background: var(--button-secondary-bg);
+  color: var(--button-text);
+  padding: 8px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.theme-toggle:hover {
+  background: var(--surface-hover);
+}
+
+@media (max-width: 640px) {
+  .meta {
+    padding-right: 0;
+    display: grid;
+    gap: 6px;
+    text-align: center;
+  }
+
+  .meta p:first-child,
+  .meta p:nth-child(3) {
+    position: static;
+    text-align: center;
+  }
+
+  .theme-toggle {
+    top: 16px;
+    right: 16px;
+  }
 }

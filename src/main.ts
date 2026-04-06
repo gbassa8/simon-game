@@ -13,10 +13,13 @@ type SaveModalResult =
       name: string
     }
 
+type Theme = 'dark' | 'light'
+
 const colors: Color[] = ['green', 'red', 'yellow', 'blue']
 
 const playerIdStorageKey = 'simon-player-id'
 const playerNameStorageKey = 'simon-player-name'
+const themeStorageKey = 'simon-theme'
 
 const frequencies: Record<Color, number> = {
   green: 329.63,
@@ -63,9 +66,9 @@ function createModalButton(label: string, primary: boolean): HTMLButtonElement {
   button.textContent = label
 
   applyStyles(button, {
-    border: '1px solid #3a3a3a',
-    background: primary ? '#f3f3f3' : '#1f1f1f',
-    color: primary ? '#111' : '#f3f3f3',
+    border: '1px solid var(--modal-border)',
+    background: primary ? 'var(--modal-button-primary-bg)' : 'var(--modal-button-bg)',
+    color: primary ? 'var(--modal-button-primary-text)' : 'var(--modal-button-text)',
     padding: '10px 14px',
     'border-radius': '999px',
     cursor: 'pointer',
@@ -105,8 +108,8 @@ function showSaveModal(score: number, defaultName: string): Promise<SaveModalRes
 
     applyStyles(modal, {
       width: 'min(92vw, 360px)',
-      background: '#171717',
-      border: '1px solid #3a3a3a',
+      background: 'var(--modal-surface)',
+      border: '1px solid var(--modal-border)',
       'border-radius': '14px',
       padding: '16px',
       display: 'grid',
@@ -115,7 +118,7 @@ function showSaveModal(score: number, defaultName: string): Promise<SaveModalRes
 
     applyStyles(title, {
       margin: '0',
-      color: '#f3f3f3',
+      color: 'var(--modal-text)',
       'font-size': '15px',
       'font-weight': '600',
       'text-transform': 'uppercase',
@@ -124,16 +127,16 @@ function showSaveModal(score: number, defaultName: string): Promise<SaveModalRes
 
     applyStyles(message, {
       margin: '0',
-      color: '#d8d8d8',
+      color: 'var(--modal-muted)',
       'font-size': '14px',
     })
 
     applyStyles(nameInput, {
       width: '100%',
-      border: '1px solid #3a3a3a',
+      border: '1px solid var(--modal-border)',
       'border-radius': '8px',
-      background: '#101010',
-      color: '#f3f3f3',
+      background: 'var(--modal-input-bg)',
+      color: 'var(--modal-text)',
       padding: '10px 12px',
       'font-size': '14px',
     })
@@ -239,8 +242,12 @@ if (meta === null) {
 }
 
 const playerText = document.createElement('p')
+const themeButton = document.createElement('button')
 
 meta.append(playerText)
+themeButton.type = 'button'
+themeButton.className = 'theme-toggle'
+document.body.append(themeButton)
 
 const pads = new Map<Color, HTMLButtonElement>(
   colors.map((color) => [color, getButton(`[data-color="${color}"]`)])
@@ -254,6 +261,7 @@ let runId = 0
 const playerId = loadPlayerId()
 let playerName = loadPlayerName()
 let bestScore: number | null = null
+let currentTheme = loadTheme()
 
 function loadPlayerId(): string {
   const saved = window.localStorage.getItem(playerIdStorageKey)?.trim()
@@ -270,6 +278,27 @@ function loadPlayerId(): string {
 function loadPlayerName(): string | null {
   const saved = window.localStorage.getItem(playerNameStorageKey)?.trim()
   return saved ? saved : null
+}
+
+function loadTheme(): Theme {
+  const saved = window.localStorage.getItem(themeStorageKey)
+  return saved === 'light' ? 'light' : 'dark'
+}
+
+function renderThemeButton(): void {
+  themeButton.textContent = currentTheme === 'light' ? 'Dark mode' : 'Light mode'
+  themeButton.setAttribute('aria-pressed', String(currentTheme === 'light'))
+}
+
+function applyTheme(theme: Theme): void {
+  currentTheme = theme
+  document.documentElement.dataset.theme = theme
+  window.localStorage.setItem(themeStorageKey, theme)
+  renderThemeButton()
+}
+
+function toggleTheme(): void {
+  applyTheme(currentTheme === 'dark' ? 'light' : 'dark')
 }
 
 function setPlayerName(name: string): void {
@@ -528,7 +557,12 @@ startButton.addEventListener('click', () => {
   void startGame()
 })
 
+themeButton.addEventListener('click', () => {
+  toggleTheme()
+})
+
 setRound(0)
 setPadsEnabled(false)
 renderPlayerMeta()
+applyTheme(currentTheme)
 void loadBestScore()
