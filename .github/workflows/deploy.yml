@@ -3,7 +3,7 @@ name: Deploy a produccion
 on:
   push:
     branches:
-      - main
+      - master
 
 permissions:
   contents: read
@@ -49,7 +49,7 @@ jobs:
 
       - name: Actualizar tag de produccion
         run: |
-          sed -i 's|^newTag: .*|newTag: sha-${{ github.sha }}|' infra-repo/gitops/services/simon-game/prod/kustomization.yaml
+          sed -i 's|^ *newTag: .*|    newTag: sha-${{ github.sha }}|' infra-repo/gitops/services/simon-game/prod/kustomization.yaml
 
       - name: Commit y push de infra
         run: |
@@ -58,4 +58,4 @@ jobs:
           git -C infra-repo add gitops/services/simon-game/prod/kustomization.yaml
           git -C infra-repo diff --cached --quiet && exit 0
           git -C infra-repo commit -m "chore: deploy simon-game sha-${{ github.sha }}"
-          git -C infra-repo push origin HEAD:main
+          git -C infra-repo push origin HEAD:master
