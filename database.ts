@@ -25,9 +25,15 @@ export function getPoolConfig(): PoolConfig {
   }
 
   const normalizedUrl = normalizeDatabaseUrl(databaseUrl)
+  const user = decodeURIComponent(normalizedUrl.username)
+  const password = decodeURIComponent(normalizedUrl.password)
 
   return {
-    connectionString: normalizedUrl.toString(),
+    host: normalizedUrl.hostname,
+    port: Number(normalizedUrl.port || '5432'),
+    database: normalizedUrl.pathname.replace(/^\//, '') || 'postgres',
+    user,
+    password,
     ssl: getSslConfig(normalizedUrl),
   }
 }
