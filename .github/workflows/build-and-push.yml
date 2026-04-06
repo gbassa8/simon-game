@@ -34,6 +34,8 @@ jobs:
         with:
           context: .
           push: true
+          provenance: false
+          sbom: false
           tags: ghcr.io/${{ github.repository_owner }}/simon-game:${{ inputs.tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

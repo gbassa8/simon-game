@@ -31,53 +31,34 @@ jobs:
           DATABASE_SCHEMA: preview_pr_${{ github.event.pull_request.number }}
 
       - name: Borrar tags preview en GHCR
-        continue-on-error: true
         uses: actions/github-script@v7
         with:
           script: |
-            const owner = context.repo.owner;
-            const ownerType = context.payload.repository.owner.type;
-            const packageName = 'simon-game';
             const tagName = `pr-${context.payload.pull_request.number}`;
-
-            const listVersions = ownerType === 'Organization'
-              ? github.rest.packages.getAllPackageVersionsForPackageOwnedByOrg
-              : github.rest.packages.getAllPackageVersionsForPackageOwnedByUser;
-
-            const deleteVersion = ownerType === 'Organization'
-              ? github.rest.packages.deletePackageVersionForOrg
-              : github.rest.packages.deletePackageVersionForUser;
-
-            const ownerKey = ownerType === 'Organization' ? 'org' : 'username';
-            const versions = await github.paginate(listVersions, {
+            const versions = await github.paginate(github.rest.packages.getAllPackageVersionsForPackageOwnedByUser, {
               package_type: 'container',
-              package_name: packageName,
+              package_name: 'simon-game',
               per_page: 100,
-              [ownerKey]: owner,
+              username: context.repo.owner,
             });
 
-            for (const version of versions) {
+            for (const version of versions.filter((version) => {
               const tags = version.metadata?.container?.tags ?? [];
-
-              if (!tags.includes(tagName)) {
-                continue;
-              }
-
-              await deleteVersion({
+              return tags.includes(tagName);
+            })) {
+              await github.rest.packages.deletePackageVersionForUser({
                 package_type: 'container',
-                package_name: packageName,
+                package_name: 'simon-game',
                 package_version_id: version.id,
-                [ownerKey]: owner,
+                username: context.repo.owner,
               });
             }
 
       - name: Crear comentario en el PR
         uses: actions/github-script@v7
-        env:
-          PR_NUMBER: ${{ github.event.pull_request.number }}
         with:
           script: |
-            const prNumber = process.env.PR_NUMBER;
+            const prNumber = context.payload.pull_request.number;
             const body = [
               '## Preview cleanup',
               '',
